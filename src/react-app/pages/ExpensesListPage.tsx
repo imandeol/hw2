@@ -33,10 +33,14 @@ const ExpensesListPage: React.FC = () => {
   };
 
   useEffect(() => {
-    //TODO: Fetch the list of expenses from the server
     (async () => {
       try {
-      } catch (e) {}
+        const list = await fetchExpenses();
+        setExpenses(list);
+      } catch (e) {
+        console.error("Failed to fetch expenses:", e);
+        setExpenses([]);
+      }
     })();
   }, []);
 
@@ -47,24 +51,24 @@ const ExpensesListPage: React.FC = () => {
   };
 
   const sortedExpenses = [...expenses].sort((a, b) => {
-    //TODO: Have the sorting logic here for date(default when you land on the page) and cost, asc and desc.
-    //TODO: use the helper function `toTime`
     let cmp = 0;
     if (sortBy === "date") {
-      //TODO: Add logic
+      const ta = toTime(a.date);
+      const tb = toTime(b.date);
+      cmp = ta - tb;
     } else {
-      //TODO: Add logic
+      const ca = Number(a.cost ?? 0);
+      const cb = Number(b.cost ?? 0);
+      cmp = ca - cb;
     }
     return sortDir === "asc" ? cmp : -cmp;
   });
 
-  //TODO: Define the pagination logic here for the expenses list based on PAGE_SIZE and the current page number.
-  // Also compute the total number of pages based on the length of sortedExpenses
-  // and PAGE_SIZE, and ensure that the current page is within valid bounds.
-  const totalPages = 0;
-  useEffect(() => setPage(1), [totalPages]);
-  const startIdx = 0;
-  const pagedExpenses = sortedExpenses;
+  const totalPages = Math.max(1, Math.ceil(sortedExpenses.length / PAGE_SIZE));
+  useEffect(() => setPage((p) => Math.min(p, totalPages)), [totalPages]);
+
+  const startIdx = (page - 1) * PAGE_SIZE;
+  const pagedExpenses = sortedExpenses.slice(startIdx, startIdx + PAGE_SIZE);
 
   const toggleDir = () => setSortDir((d) => (d === "asc" ? "desc" : "asc"));
 
@@ -79,20 +83,33 @@ const ExpensesListPage: React.FC = () => {
 
   const saveEdit = async (id: string | number, next: TempEdit) => {
     const parsedCost = parseFloat(next.cost);
-    //TODO: Validate the inputs before saving the edit
+    if (!next.description.trim()) {
+      openDialog("Description is required");
+      return;
+    }
+    if (Number.isNaN(parsedCost) || parsedCost < 0) {
+      openDialog("Enter a valid non-negative cost");
+      return;
+    }
+
+    const updated = { ...next, cost: +parsedCost.toFixed(2) };
+    setExpenses((prev) =>
+      prev.map((e) => (e.id === id ? ({ ...e, ...updated } as Expense) : e))
+    );
     setEditingId(null);
 
     try {
-      //TODO: Send the data to the server to update the expense
+      await updateExpense(id, updated);
     } catch (e) {
       console.error("Failed to save edit:", e);
     }
   };
 
   const deleteExpense = async (id: string | number) => {
+    setExpenses((prev) => prev.filter((e) => e.id !== id));
+    if (editingId === id) setEditingId(null);
     try {
-      // TODO: Send the delete request to the server
-      // and fetch the updated list of expenses
+      await apiDelete(id);
     } catch (e) {
       console.error("Failed to delete:", e);
     }

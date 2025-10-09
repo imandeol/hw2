@@ -15,7 +15,9 @@ const App: React.FC = () => {
           <NavLink to="/add" className="nav-link" data-testid="add-expense">
             Add Expense
           </NavLink>
-          {/* TODO: Define a Nav Link to traverse to the Total Page */}
+          <NavLink to="/total" className="nav-link" data-testid="total-link">
+            Total
+          </NavLink>
         </nav>
 
         <div className="app-inner">

@@ -17,13 +17,35 @@ const AddExpensePage: React.FC = () => {
     if (d && typeof d.showModal === "function") d.showModal();
   };
 
+  const clear = () => {
+    setDesc("");
+    setDate(new Date().toISOString().slice(0, 10));
+    setCost("");
+  };
+
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    //TODO: Validate the inputs before adding the expense
+    if (!desc.trim()) {
+      openDialog("Description is required");
+      return;
+    }
+    const parsedCost = parseFloat(cost);
+    if (Number.isNaN(parsedCost) || parsedCost < 0) {
+      openDialog("Enter a valid non-negative cost");
+      return;
+    }
+
+    const payload = {
+      description: desc.trim(),
+      date,
+      cost: +parsedCost.toFixed(2),
+    };
 
     try {
-      //TODO: Send the data to the server to add the expense using utils/addExpense
+      await addExpense(payload);
+      clear();
+      navigate("/");
     } catch (err) {
       console.error("Failed to add:", err);
       openDialog("Failed to add expense");

@@ -12,27 +12,42 @@ const app = new Hono<{ Bindings: Env }>();
 app.get("/api/expenses", async (c) => {
   const db = drizzle(c.env.DB);
 
-  //TODO: Fetch the list of expenses from the database
-  const expenseList = [];
-  return c.json({ expenseList: [] });
+  const expenseList = await db
+    .select()
+    .from(expenses)
+    .where(eq(expenses.deleted, false))
+    .orderBy(desc(expenses.id));
+  return c.json({ expenseList });
 });
 
 app.post("/api/addExpense", async (c) => {
   const db = drizzle(c.env.DB);
 
-  //TODO: Define the expected structure of the incoming expense data
-  const expense = await c.req.json<{}>();
+  const expense = await c.req.json<{
+    description: string;
+    date: string;
+    cost: number;
+  }>();
 
-  //TODO: Validate the inputs before adding the expense and send appropriate error messages
-  if (expense) {
-    return c.json({ error: "Invalid input" }, 400);
+  const { description, date, cost } = expense;
+
+  if (!description || typeof description !== "string") {
+    return c.json({ error: "Invalid description" }, 400);
+  }
+  if (!date || typeof date !== "string") {
+    return c.json({ error: "Invalid date" }, 400);
+  }
+  if (typeof cost !== "number" || cost < 0) {
+    return c.json({ error: "Invalid cost" }, 400);
   }
 
-  //TODO: Add the expense to the database and return the newly created expense
-
+  const result = await db
+    .insert(expenses)
+    .values({ description, date, cost, deleted: false })
+    .returning();
   return c.json({
     message: "Expense saved successfully",
-    expense: {},
+    expense: result[0],
   });
 });
 
@@ -45,17 +60,19 @@ app.delete("/api/expenses/:id", async (c) => {
   }
 
   try {
-    //TODO: Delete the expense from the database by setting deleted flag
+    const result = await db
+      .update(expenses)
+      .set({ deleted: true })
+      .where(eq(expenses.id, Number(id)))
+      .returning();
 
-    //TODO: If no rows were affected, return a 404 error
-    if (id) {
+    if (result.length === 0) {
       return c.json({ error: "Expense not found" }, 404);
     }
 
-    // TODO: If deletion was successful, return a success message
     return c.json({
       message: "Expense deleted successfully",
-      expense: {},
+      expense: result[0],
     });
   } catch (err) {
     console.error("Error deleting expense:", err);
@@ -90,17 +107,23 @@ app.put("/api/expenses/:id", async (c) => {
   }
 
   try {
-    //TODO: Update the expense in the database
+    const result = await db
+      .update(expenses)
+      .set({
+        description,
+        date,
+        cost,
+      })
+      .where(eq(expenses.id, Number(id)))
+      .returning();
 
-    //TODO: If no rows were affected, return a 404 error
-    if (id) {
-      return c.json({ error: "Expense not found" }, 200);
+    if (result.length === 0) {
+      return c.json({ error: "Expense not found" }, 404);
     }
 
-    //TODO: If update was successful, return a success message and the updated expense
     return c.json({
       message: "Expense updated successfully",
-      expense: {},
+      expense: result[0],
     });
   } catch (err) {
     console.error("Error updating expense:", err);
