@@ -17,7 +17,7 @@ try {
   DB_NAME = process.env.D1_DB_NAME || "test-db";
 }
 
-const ROWS = 250;
+const ROWS = 35;
 
 function run(cmd, ...args) {
   return execFileSync(cmd, args, { encoding: "utf8" }).trim();
@@ -80,7 +80,7 @@ if (existing > 0) {
 faker.seed(42);
 const now = new Date();
 const past = new Date(now);
-past.setMonth(now.getMonth() - 6);
+past.setMonth(now.getMonth() - 1);
 
 const rows = Array.from({ length: ROWS }, () => ({
   description: faker.commerce.productName().replaceAll("'", "''"),
